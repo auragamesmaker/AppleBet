@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AppleBet — Mines, Rocket & Roulette</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #001f3f;
+      --bg-2: #011627;
+      --accent: #0074D9;
+      --accent-2: #7FDBFF;
+      --teal: #39CCCC;
+      --red: #FF4136;
+      --text: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+    /* GRID LAYOUT */
+    .app {
+      display: grid;
+      grid-template-columns: 160px 280px 1fr;
+      grid-template-rows: 56px 1fr 56px;
+      grid-template-areas:
+        "sidebar header header"
+        "sidebar controls main"
+        "sidebar footer footer";
+      height: 100vh;
+    }
+    /* HEADER */
+    .header {
+      grid-area: header;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      background: linear-gradient(90deg,#021a31,#03223f);
+      border-bottom: 1px solid #07365f;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 10px;
+      color: var(--accent-2);
+      font-weight: 600;
+      letter-spacing: .3px;
+    }
+    .brand .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent-2);
+      box-shadow: 0 0 10px var(--accent-2);
+    }
+    .balance {
+      display: flex; align-items: center; gap: 10px;
+      color: var(--accent-2); font-weight: 700;
+    }
+    .settings-btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      cursor: pointer;
+      padding: 6px 10px;
+      font-weight: 700;
+    }
+    .settings-btn:hover {
+      background: #0a66b7;
+    }
+    /* SIDEBAR */
+    .sidebar {
+      grid-area: sidebar;
+      background: #021224;
+      border-right: 1px solid #07365f;
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      gap: 8px;
+    }
+    .nav-title {
+      color: #9bdcff;
+      font-size: .85rem;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      margin: 6px 6px 2px;
+      opacity: .85;
+    }
+    .nav-btn {
+      width: 100%;
+      padding: 12px 10px;
+      border: 1px solid #083a66;
+      border-radius: 8px;
+      background: #08203b;
+      color: #cfeeff;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      transition: background .2s;
+    }
+    .nav-btn:hover { background: #0a2a4e; }
+    .nav-btn.active {
+      background: #0c3b6f;
+      border-color: #0c66b7;
+      box-shadow: 0 0 0 2px rgba(0,116,217,.25) inset;
+    }
+    /* CONTROLS */
+    .controls {
+      grid-area: controls;
+      background: var(--bg-2);
+      padding: 16px;
+      border-right: 1px solid #07365f;
+      overflow: auto;
+    }
+    .section {
+      background: #081c31;
+      border: 1px solid #093e6e;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    .section h3 {
+      margin: 0 0 10px;
+      color: var(--accent-2);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: .2px;
+    }
+    label {
+      display: block;
+      font-size: .9rem;
+      color: var(--accent-2);
+      margin: 10px 0 6px;
+    }
+    input[type="number"],
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      background: var(--accent-2);
+      color: #001f3f;
+      font-weight: 700;
+    }
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 800;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background .2s;
+    }
+    .btn:hover { background: #0a66b7; }
+    .btn.secondary {
+      background: #083a66;
+      border: 1px solid #0a66b7;
+    }
+    .btn:disabled {
+      opacity: .5;
+      cursor: default;
+    }
+    .hint {
+      font-size: .85rem;
+      color: #9bdcff;
+      min-height: 1.2em;
+      margin-top: 6px;
+    }
+    /* MAIN VIEWS */
+    .main {
+      grid-area: main;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      padding: 16px;
+    }
+    .view {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: none;
+      align-items: center; justify-content: center;
+    }
+    .view.active { display: flex; }
+    /* MINES STYLES */
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(5, 70px);
+      grid-gap: 10px;
+      user-select: none;
+    }
+    .cell {
+      width: 70px; height: 70px;
+      background: var(--accent-2);
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      font-size: 1.8rem;
+      color: #001f3f;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .cell:active { transform: scale(.98); }
+    .cell.revealed-safe {
+      background: var(--teal);
+      border-color: var(--teal);
+      box-shadow: 0 0 14px rgba(57,204,204,.35);
+      cursor: default;
+    }
+    .cell.bomb {
+      background: var(--red);
+      border-color: var(--red);
+      color: #fff;
+      cursor: default;
+      animation: shake .4s ease;
+    }
+    @keyframes shake {
+      0%,100% { transform: translateX(0) }
+      20% { transform: translateX(-3px) }
+      40% { transform: translateX(3px) }
+      60% { transform: translateX(-2px) }
+      80% { transform: translateX(2px) }
+    }
+    .multiplier {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: var(--accent-2);
+      font-weight: 800;
+      background: rgba(0,0,0,.25);
+      padding: 6px 12px;
+      border: 1px solid #0a66b7;
+      border-radius: 999px;
+      backdrop-filter: blur(6px);
+    }
+    /* ROCKET STYLES */
+    .rocket-stage {
+      position: absolute; inset: 0;
+      background: radial-gradient(
+        1200px 600px at 50% 100%,
+        rgba(1,22,39,.7),
+        rgba(1,22,39,1) 50%,
+        #001528 100%
+      );
+      overflow: hidden;
+    }
+    .stars {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(2px 2px at 20% 30%, #fff8 50%, transparent 51%) repeat,
+        radial-gradient(1.5px 1.5px at 70% 60%, #fff6 50%, transparent 51%) repeat,
+        radial-gradient(1.2px 1.2px at 40% 80%, #fff5 50%, transparent 51%) repeat;
+      background-size: 300px 300px, 500px 500px, 400px 400px;
+      animation: starScroll 30s linear infinite;
+      opacity: .9;
+    }
+    @keyframes starScroll {
+      from { background-position: 0 0, 0 0, 0 0 }
+      to   { background-position: 0 -600px, 0 -1000px, 0 -800px }
+    }
+    .rocket {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 42px;
+      filter: drop-shadow(0 8px 16px rgba(0,0,0,.6));
+      transition: transform .08s linear;
+    }
+    .flame {
+      position: absolute;
+      top: 34px; left: 50%;
+      transform: translateX(-50%);
+      width: 10px; height: 22px;
+      border-radius: 50%;
+      background: conic-gradient(from .25turn, #ff0,#f60,#f00,#ff0);
+      filter: blur(1px) drop-shadow(0 0 8px #f80);
+      animation: flame 0.15s infinite alternate;
+    }
+    @keyframes flame {
+      from { transform: translateX(-50%) scaleY(.9) }
+      to   { transform: translateX(-50%) scaleY(1.15) }
+    }
+    .rocket-mult {
+      position: absolute;
+      top: 16px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10,102,183,.2);
+      border: 1px solid #0a66b7;
+      color: #cfeeff;
+      font-weight: 900;
+      padding: 8px 16px;
+      border-radius: 999px;
+      letter-spacing: .3px;
+      backdrop-filter: blur(6px);
+      box-shadow: inset 0 4px 20px rgba(0,116,217,.25);
+    }
+    .boom {
+      position: absolute;
+      width: 140px; height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #fff 0%, #ffd166 20%, #f44747 55%, transparent 60%);
+      filter: blur(1px);
+      animation: boom .7s ease forwards;
+      pointer-events: none;
+    }
+    @keyframes boom {
+      0%   { transform: scale(.1); opacity: .9 }
+      60%  { transform: scale(1.4); opacity: .75 }
+      100% { transform: scale(2.2); opacity: 0 }
+    }
+    /* ROULETTE STYLES */
+    .roulette-stage {
+      position: relative;
+      width: 400px;
+      height: 80px;
+      overflow: hidden;
+      border: 4px solid var(--accent);
+      border-radius: 12px;
+      background: #081c31;
+    }
+    .spinner-line {
+      position: absolute;
+      top: 0; left: 0;
+      width: 400px;
+      height: 100%;
+      background:
+        linear-gradient(
+          to right,
+          #ff4136 0%,       /* red */
+          #ff4136 49%,      /* red ends at 49% */
+          #001f3f 49%,      /* black starts */
+          #001f3f 98%,      /* black ends at 98% */
+          #ffffff 98%,      /* white starts */
+          #ffffff 100%      /* white ends */
+        );
+      transform: translateX(0);
+    }
+    .spinner-arrow {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0; height: 0;
+      border-left: 12px solid transparent;
+      border-right: 12px solid transparent;
+      border-bottom: 12px solid var(--accent-2);
+    }
+    /* FOOTER */
+    .footer {
+      grid-area: footer;
+      border-top: 1px solid #07365f;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      background: #021a31;
+      color: #9bdcff;
+      font-size: .9rem;
+    }
+    /* SETTINGS MODAL */
+    .settings-modal {
+      position: absolute;
+      top: 56px; right: 16px;
+      background: #081c31;
+      border: 1px solid #0a66b7;
+      border-radius: 8px;
+      padding: 14px;
+      width: 260px;
+      z-index: 1000;
+      box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    }
+    /* TOASTS */
+    .toasts {
+      position: fixed;
+      right: 16px; bottom: 16px;
+      display: flex; flex-direction: column; gap: 10px;
+      z-index: 9999;
+    }
+    .toast {
+      background: rgba(1,22,39,.9);
+      border: 1px solid #0a66b7;
+      color: #cfeeff;
+      padding: 10px 14px;
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.4);
+      opacity: 0;
+      transform: translateY(10px);
+      animation: toastIn .2s ease forwards;
+    }
+    .toast.good { border-color: #2ecc71; }
+    .toast.bad  { border-color: #f44747; }
+    @keyframes toastIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="nav-title">Games</div>
+      <button id="nav-mines"    class="nav-btn active">💣 Mines</button>
+      <button id="nav-rocket"   class="nav-btn">🚀 Rocket</button>
+      <button id="nav-roulette" class="nav-btn">🎰 Roulette</button>
+    </aside>
+
+    <!-- HEADER -->
+    <header class="header">
+      <div class="brand"><span class="dot"></span> AppleBet</div>
+      <div class="balance">
+        Balance: 🍎 <span id="balance">0</span>
+        <button id="settings-btn" class="settings-btn">⚙</button>
+      </div>
+    </header>
+
+    <!-- CONTROLS -->
+    <section class="controls">
+      <!-- MINES CONTROLS -->
+      <div id="mines-controls" class="section">
+        <h3>Mines controls</h3>
+        <label for="bet-input">Bet (apples)</label>
+        <input type="number" id="bet-input" min="1" value="10"/>
+        <label for="bomb-input">Bombs</label>
+        <input type="number" id="bomb-input" min="1" max="24" value="5"/>
+        <button id="start-mines"   class="btn">Start Mines</button>
+        <button id="withdraw-mines" class="btn secondary" disabled>Withdraw Mines</button>
+        <div id="mines-hint" class="hint"></div>
+      </div>
+      <!-- ROCKET CONTROLS -->
+      <div id="rocket-controls" class="section" style="display:none;">
+        <h3>Rocket controls</h3>
+        <label for="rocket-bet">Bet (apples)</label>
+        <input type="number" id="rocket-bet" min="1" value="10"/>
+        <button id="start-rocket"   class="btn">Launch Rocket</button>
+        <button id="withdraw-rocket" class="btn secondary" disabled>Withdraw Rocket</button>
+        <div id="rocket-hint" class="hint"></div>
+      </div>
+      <!-- ROULETTE CONTROLS -->
+      <div id="roulette-controls" class="section" style="display:none;">
+        <h3>Roulette controls</h3>
+        <label for="roulette-bet-red">Bet on Red (49% → 2×)</label>
+        <input type="number" id="roulette-bet-red" min="0" value="0"/>
+        <label for="roulette-bet-black">Bet on Black (49% → 2×)</label>
+        <input type="number" id="roulette-bet-black" min="0" value="0"/>
+        <label for="roulette-bet-white">Bet on White (2% → 20×)</label>
+        <input type="number" id="roulette-bet-white" min="0" value="0"/>
+        <button id="spin-roulette" class="btn">Spin Roulette</button>
+        <div id="roulette-hint" class="hint"></div>
+      </div>
+    </section>
+
+    <!-- MAIN AREA -->
+    <main class="main">
+      <!-- MINES VIEW -->
+      <div id="mines-view" class="view active">
+        <div>
+          <div id="grid"></div>
+          <div class="multiplier" id="mines-mult">1.00×</div>
+        </div>
+      </div>
+      <!-- ROCKET VIEW -->
+      <div id="rocket-view" class="view">
+        <div class="rocket-stage" id="rocket-stage">
+          <div class="stars"></div>
+          <div class="rocket-mult" id="rocket-mult">1.00×</div>
+          <div class="rocket" id="rocket">
+            🚀<span class="flame"></span>
+          </div>
+        </div>
+      </div>
+      <!-- ROULETTE VIEW -->
+      <div id="roulette-view" class="view">
+        <div class="roulette-stage">
+          <div class="spinner-line" id="spinner-line"></div>
+          <div class="spinner-arrow"></div>
+        </div>
+      </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      <div>No ads • Apples • Just Perfect</div>
+      <div>Good luck 🍀</div>
+    </footer>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-panel" class="settings-modal" style="display:none;">
+    <h3 style="margin:0 0 10px;color:var(--accent-2)">Settings</h3>
+    <label for="code-input">Enter code</label>
+    <input type="text" id="code-input" placeholder="Enter your code…"/>
+    <button id="code-submit" class="btn">Redeem</button>
+    <div id="code-message" class="hint"></div>
+  </div>
+
+  <!-- TOASTS CONTAINER -->
+  <div id="toasts" class="toasts"></div>
+
+  <script>
+    // UTIL: Toast notifications
+    function toast(msg, type='info', duration=2000) {
+      const wrap = document.getElementById('toasts');
+      const t = document.createElement('div');
+      t.className = 'toast ' + (type==='good'? 'good': type==='bad'? 'bad':'' );
+      t.textContent = msg;
+      wrap.appendChild(t);
+      setTimeout(()=> {
+        t.style.transition = 'opacity .3s, transform .3s';
+        t.style.opacity = '0';
+        t.style.transform = 'translateY(10px)';
+      }, duration);
+      setTimeout(()=> wrap.removeChild(t), duration + 300);
+    }
+
+    // PERSISTENT BALANCE & CODES
+    let balance = parseInt(localStorage.getItem('appleBetBalance') || '1250', 10);
+    let redeemedCodes = JSON.parse(localStorage.getItem('appleBetRedeemed') || '[]');
+    const balanceEl = document.getElementById('balance');
+    function updateBalanceUI() {
+      balanceEl.textContent = balance;
+      localStorage.setItem('appleBetBalance', balance);
+    }
+    function saveCodes() {
+      localStorage.setItem('appleBetRedeemed', JSON.stringify(redeemedCodes));
+    }
+    updateBalanceUI();
+
+    // NAVIGATION & VIEW SWITCHING
+    const navMines    = document.getElementById('nav-mines');
+    const navRocket   = document.getElementById('nav-rocket');
+    const navRoulette = document.getElementById('nav-roulette');
+    const minesView   = document.getElementById('mines-view');
+    const rocketView  = document.getElementById('rocket-view');
+    const rouleView   = document.getElementById('roulette-view');
+    const minesCtrls  = document.getElementById('mines-controls');
+    const rocketCtrls = document.getElementById('rocket-controls');
+    const roulCtrls   = document.getElementById('roulette-controls');
+
+    function setView(v) {
+      // hide all views & controls
+      [minesView, rocketView, rouleView].forEach(el=>el.classList.remove('active'));
+      [minesCtrls, rocketCtrls, roulCtrls].forEach(el=>el.style.display = 'none');
+      [navMines, navRocket, navRoulette].forEach(el=>el.classList.remove('active'));
+
+      if(v==='mines') {
+        minesView.classList.add('active');
+        minesCtrls.style.display = '';
+        navMines.classList.add('active');
+      }
+      if(v==='rocket') {
+        rocketView.classList.add('active');
+        rocketCtrls.style.display = '';
+        navRocket.classList.add('active');
+      }
+      if(v==='roulette') {
+        rouleView.classList.add('active');
+        roulCtrls.style.display = '';
+        navRoulette.classList.add('active');
+      }
+    }
+    navMines.addEventListener('click',()=>setView('mines'));
+    navRocket.addEventListener('click',()=>setView('rocket'));
+    navRoulette.addEventListener('click',()=>setView('roulette'));
+
+    // SETTINGS MODAL
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsPanel = document.getElementById('settings-panel');
+    settingsBtn.addEventListener('click', () => {
+      settingsPanel.style.display = settingsPanel.style.display === 'none' ? 'block' : 'none';
+    });
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#settings-panel') && !e.target.closest('#settings-btn')) {
+        settingsPanel.style.display = 'none';
+      }
+    });
+
+    // CODE REDEMPTION
+    document.getElementById('code-submit').addEventListener('click', ()=>{
+      const code = document.getElementById('code-input').value.trim().toLowerCase();
+      const msgEl = document.getElementById('code-message');
+      if(code==='imjustbetter') {
+        if(!redeemedCodes.includes(code)) {
+          redeemedCodes.push(code); saveCodes();
+          balance += 100000; updateBalanceUI();
+          msgEl.textContent = 'Success! +100 000 apples.';
+          toast('Code redeemed: +100 000 apples!', 'good');
+        } else {
+          msgEl.textContent = 'Code already used.';
+          toast('Code already used.', 'bad');
+        }
+      } else {
+        msgEl.textContent = 'Invalid code.';
+        toast('Invalid code.', 'bad');
+      }
+    });
+
+    /* ————————— MINES GAME ————————— */
+    const gridEl         = document.getElementById('grid');
+    const minesMultEl    = document.getElementById('mines-mult');
+    const betInput       = document.getElementById('bet-input');
+    const bombInput      = document.getElementById('bomb-input');
+    const startMinesBtn  = document.getElementById('start-mines');
+    const withdrawMines  = document.getElementById('withdraw-mines');
+    const minesHint      = document.getElementById('mines-hint');
+
+    let minesActive    = false;
+    let minesBombs     = new Set();
+    let minesRevealed  = 0;
+    let minesMultiplier= 1;
+    let minesBet       = 0;
+
+    function updateMinesMult() {
+      minesMultEl.textContent = minesMultiplier.toFixed(2)+'×';
+    }
+    function resetMinesGrid() {
+      gridEl.innerHTML = '';
+      minesBombs.clear();
+      minesRevealed = 0;
+      minesMultiplier = 1;
+      updateMinesMult();
+      for(let i=0;i<25;i++){
+        const c = document.createElement('button');
+        c.className='cell'; c.dataset.i=i; c.disabled=true;
+        c.addEventListener('click', onMinesCell);
+        gridEl.appendChild(c);
+      }
+      minesHint.textContent='';
+    }
+    function placeMinesBombs(B){
+      while(minesBombs.size < B) {
+        minesBombs.add(Math.floor(Math.random()*25));
+      }
+    }
+
+    startMinesBtn.addEventListener('click', ()=>{
+      if(minesActive) return;
+      const bet = parseInt(betInput.value,10);
+      const b   = parseInt(bombInput.value,10);
+      if(!(bet>0 && bet<=balance)){ minesHint.textContent='Invalid bet.'; return; }
+      if(!(b>=1&&b<=24)) { minesHint.textContent='Bombs must be 1–24.'; return; }
+      minesBet=bet;
+      balance-=bet; updateBalanceUI();
+      minesActive=true;
+      placeMinesBombs(b);
+      document.querySelectorAll('#grid .cell').forEach(c=>c.disabled=false);
+      startMinesBtn.disabled=true;
+      withdrawMines.disabled=false;
+      betInput.disabled=true;
+      bombInput.disabled=true;
+      minesHint.textContent='Click a safe square or withdraw.';
+      toast('Mines started!', 'good');
+    });
+
+    function onMinesCell(e){
+      if(!minesActive) return;
+      const idx = +e.currentTarget.dataset.i;
+      const c   = e.currentTarget;
+      if(minesBombs.has(idx)){
+        c.classList.add('bomb'); c.textContent='💣';
+        toast('Boom! You lost.', 'bad');
+        endMines();
+        return;
+      }
+      c.classList.add('revealed-safe'); c.textContent='✅'; c.disabled=true;
+      minesRevealed++;
+      const N=25, B=+bombInput.value;
+      const growthFactor = 1 + (B / N); // More bombs = higher risk = faster multiplier growth
+minesMultiplier *= growthFactor;
+
+      updateMinesMult();
+    }
+
+    withdrawMines.addEventListener('click', ()=>{
+      if(!minesActive || minesRevealed===0) {
+        minesHint.textContent='Reveal at least one safe square.';
+        return;
+      }
+      const win = Math.floor(minesBet * minesMultiplier);
+      balance+=win; updateBalanceUI();
+      toast(`Withdrew ${win} from Mines.`, 'good');
+      endMines();
+    });
+
+    function endMines(){
+      minesActive = false;
+      document.querySelectorAll('#grid .cell').forEach(c=>c.disabled=true);
+      startMinesBtn.disabled=false;
+      withdrawMines.disabled=true;
+      betInput.disabled=false;
+      bombInput.disabled=false;
+      resetMinesGrid();
+    }
+
+    /* ————————— ROCKET GAME ————————— */
+    const rocketStage      = document.getElementById('rocket-stage');
+    const rocketEl         = document.getElementById('rocket');
+    const rocketMultEl     = document.getElementById('rocket-mult');
+    const rocketBetInput   = document.getElementById('rocket-bet');
+    const startRocketBtn   = document.getElementById('start-rocket');
+    const withdrawRocket   = document.getElementById('withdraw-rocket');
+    const rocketHint       = document.getElementById('rocket-hint');
+
+    let rocketActive = false,
+        rocketCrashed= false,
+        rocketBet    = 0,
+        rocketMul    = 1,
+        rocketY      = 40,
+        lastTs       = 0;
+    const GR    = 0.55,
+          HAZ   = 0.18;
+
+    function rocketLoop(ts){
+      if(!lastTs) lastTs = ts;
+      const dt = Math.min(0.05,(ts-lastTs)/1000);
+      lastTs = ts;
+      if(rocketActive && !rocketCrashed){
+        rocketMul *= (1+GR*dt);
+        rocketMultEl.textContent = rocketMul.toFixed(2)+'×';
+        rocketY += 80*dt;
+        const bob = Math.sin(ts/120)*2;
+        rocketEl.style.transform=`translate(-50%,${-rocketY+bob}px)`;
+        const lambda = HAZ*Math.max(rocketMul-1,0.02);
+        if(Math.random() < 1-Math.exp(-lambda*dt)){
+          explodeRocket();
+        }
+      } else {
+        const bob = Math.sin(ts/200)*1.5;
+        rocketEl.style.transform=`translate(-50%,${-40+bob}px)`;
+      }
+      requestAnimationFrame(rocketLoop);
+    }
+    requestAnimationFrame(rocketLoop);
+
+    function explodeRocket(){
+      rocketCrashed = true;
+      rocketActive = false;
+      withdrawRocket.disabled = true;
+      const r = rocketEl.getBoundingClientRect();
+      const s = rocketStage.getBoundingClientRect();
+      const boom = document.createElement('div');
+      boom.className='boom';
+      const x = r.left - s.left + r.width/2 - 70;
+      const y = r.top  - s.top  + r.height/2 - 70;
+      boom.style.left = x+'px';
+      boom.style.top  = y+'px';
+      rocketStage.appendChild(boom);
+      setTimeout(()=>boom.remove(),800);
+      rocketHint.textContent='Rocket exploded.';
+      toast('Rocket exploded.', 'bad');
+      setTimeout(resetRocket,400);
+    }
+
+    function resetRocket(){
+      rocketMul=1;
+      rocketMultEl.textContent='1.00×';
+      rocketY=40;
+      rocketCrashed=false;
+      startRocketBtn.disabled=false;
+    }
+
+    startRocketBtn.addEventListener('click', ()=>{
+      if(rocketActive) return;
+      const bet = parseInt(rocketBetInput.value,10);
+      if(!(bet>0 && bet<=balance)){
+        rocketHint.textContent='Invalid bet.'; return;
+      }
+      rocketBet = bet;
+      balance -= bet; updateBalanceUI();
+      rocketActive = true;
+      rocketMul = 1;
+      withdrawRocket.disabled = false;
+      startRocketBtn.disabled = true;
+      rocketHint.textContent='Rocket launched! Withdraw any time.';
+      toast('Rocket launched!', 'good');
+    });
+
+    withdrawRocket.addEventListener('click', ()=>{
+      if(!rocketActive || rocketCrashed) return;
+      const win = Math.floor(rocketBet * rocketMul);
+      balance += win; updateBalanceUI();
+      rocketActive = false;
+      withdrawRocket.disabled = true;
+      startRocketBtn.disabled = false;
+      rocketHint.textContent=`Withdrew ${win} apples.`;
+      toast(`Withdrew ${win} from Rocket.`, 'good');
+      setTimeout(resetRocket,200);
+    });
+
+    /* ————————— ROULETTE GAME ————————— */
+    const redInput    = document.getElementById('roulette-bet-red');
+    const blackInput  = document.getElementById('roulette-bet-black');
+    const whiteInput  = document.getElementById('roulette-bet-white');
+    const spinBtn     = document.getElementById('spin-roulette');
+    const roulHint    = document.getElementById('roulette-hint');
+    const lineEl      = document.getElementById('spinner-line');
+    let spinning      = false;
+
+    spinBtn.addEventListener('click', ()=>{
+      if(spinning) return;
+      const red   = parseInt(redInput.value,10)   || 0;
+      const black = parseInt(blackInput.value,10) || 0;
+      const white = parseInt(whiteInput.value,10) || 0;
+      const total = red + black + white;
+      if(total<=0 || total>balance){
+        roulHint.textContent='Invalid bets or exceeds balance.'; return;
+      }
+      // deduct
+      balance -= total; updateBalanceUI();
+      roulHint.textContent = 'Spinning…';
+      toast('Roulette spinning!', 'info');
+
+      // determine outcome
+      const r = Math.random();
+      let outcome, multiplier, minPct, maxPct;
+      if(r < 0.49) {
+        outcome='red'; multiplier=2; minPct=0;     maxPct=0.49;
+      }
+      else if(r < 0.98) {
+        outcome='black'; multiplier=2; minPct=0.49; maxPct=0.98;
+      }
+      else {
+        outcome='white'; multiplier=20; minPct=0.98; maxPct=1.00;
+      }
+
+      // spin animation
+      spinning = true;
+      const width = 400;
+      const regionMin = minPct * width;
+      const regionMax = maxPct * width;
+      const target   = (regionMin + regionMax)/2;
+      // compute translate so that target color sits under arrow (center=200px)
+      const shift = 200 - target;
+      lineEl.style.transition = 'transform 3s cubic-bezier(.33,1,.68,1)';
+      lineEl.style.transform  = `translateX(${shift}px)`;
+
+      lineEl.addEventListener('transitionend', onRouletteResult, { once: true });
+
+      function onRouletteResult(){
+        // payout
+        const betOnOutcome = outcome==='red'? red : outcome==='black'? black : white;
+        const win = Math.floor(betOnOutcome * multiplier);
+        if(win>0) {
+          balance += win;
+          updateBalanceUI();
+          toast(`You hit ${outcome}! +${win}`, 'good');
+        } else {
+          toast(`You hit ${outcome}. No payout.`, 'bad');
+        }
+        roulHint.textContent = `Result: ${outcome.toUpperCase()}.`;
+        // reset spinner
+        setTimeout(()=>{
+          lineEl.style.transition='none';
+          lineEl.style.transform='translateX(0)';
+          spinning=false;
+        }, 500);
+      }
+    });
+
+    /* ————————— INITIALIZE ————————— */
+    function init(){
+      updateBalanceUI();
+      resetMinesGrid();
+      withdrawMines.disabled = true;
+      withdrawRocket.disabled = true;
+    }
+    init();
+
+  </script>
+</body>
+</html>
